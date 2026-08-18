@@ -7,7 +7,7 @@ export const personalData = {
   email: "laibafatima0116@gmail.com",
   linkedin: "https://linkedin.com/in/laiba-fatima7760b1325",
   github: "https://github.com/laiba-012",
-  status: "Available for Full-Time / Remote / On-Site Roles (2026 BS CS Grad)",
+  status: "Available for Full-Time / Remote / On-Site Roles (BS CS Graduate)",
   bio: "Passionate Full MERN Stack Developer and Software Engineer with a solid foundation in Computer Science from the University of Haripur. Skilled in building full-stack web applications with React, Node.js, Express, and MongoDB, alongside hands-on industry internship experience at Giga Developers Pvt. Ltd. Experienced in C++ and Unreal Engine for 3D mission-based game development, as well as IoT and AI cloud systems.",
   
   recruiterSummary: {
@@ -16,7 +16,7 @@ export const personalData = {
       "Full MERN Stack Expertise (MongoDB, Express, React, Node.js)",
       "Hands-on Industry Internship Experience at Giga Developers Pvt. Ltd. (Feb - Aug 2025)",
       "Final Year Project: 3D Mission-Based Game built using Unreal Engine & C++",
-      "Solid Computer Science Fundamentals (BS CS 2022-2026 @ University of Haripur)",
+      "Solid Computer Science Fundamentals (BS CS Graduate @ University of Haripur)",
       "Versatile tech background including Java, Python, SQL, REST APIs & IoT systems",
       "Clean, maintainable code with strong UI/UX aesthetic design"
     ],
@@ -24,7 +24,7 @@ export const personalData = {
       { label: "MERN Stack Projects", value: "5+" },
       { label: "Internship Experience", value: "6 Mos" },
       { label: "Core Technologies", value: "10+" },
-      { label: "Degree Graduation", value: "2026" }
+      { label: "Degree Status", value: "Graduated" }
     ]
   }
 };
@@ -197,8 +197,8 @@ export const educationData = [
     degree: "Bachelors in Computer Science (BS CS)",
     institution: "University of Haripur",
     period: "2022 – 2026",
-    status: "Graduating Final Semester",
-    details: "Specialized in Full-Stack Web Development, Software Engineering, Object-Oriented Programming (OOP), Data Structures & Algorithms, and 3D Game Development in Unreal Engine (FYP)."
+    status: "Graduated",
+    details: "Graduated with specialization in Full-Stack Web Development, Software Engineering, Object-Oriented Programming (OOP), Data Structures & Algorithms, and 3D Game Development in Unreal Engine (FYP)."
   },
   {
     degree: "FSc Pre-Engineering",

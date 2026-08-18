@@ -10,11 +10,10 @@ function Canvas3DScene() {
     const container = mountRef.current;
     if (!container) return;
 
-    // Detect mobile for a lighter scene + touch support
-    const isMobile = window.innerWidth < 768;
-
     // Scene setup
     const scene = new THREE.Scene();
+    const isMobile = container.clientWidth < 768;
+
     const camera = new THREE.PerspectiveCamera(
       60,
       container.clientWidth / container.clientHeight,
@@ -23,45 +22,13 @@ function Canvas3DScene() {
     );
     camera.position.z = 8;
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: !isMobile });
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    // 1. Sleek Floating 3D Geometric Crystal (Positioned on Far Right, NOT overlapping text)
-    const crystalGroup = new THREE.Group();
-    crystalGroup.position.set(4.2, 1.2, 0); // Shifted far right behind code panel
-    scene.add(crystalGroup);
-
-    const crystalGeo = new THREE.OctahedronGeometry(1.4, 0);
-    const crystalMat = new THREE.MeshStandardMaterial({
-      color: 0x38bdf8,
-      wireframe: true,
-      emissive: 0x0284c7,
-      emissiveIntensity: 0.5,
-      transparent: true,
-      opacity: 0.6,
-    });
-    const crystalMesh = new THREE.Mesh(crystalGeo, crystalMat);
-    crystalGroup.add(crystalMesh);
-
-    const innerCrystalGeo = new THREE.IcosahedronGeometry(0.7, 0);
-    const innerCrystalMat = new THREE.MeshBasicMaterial({
-      color: 0xa855f7,
-      wireframe: true,
-    });
-    const innerCrystalMesh = new THREE.Mesh(innerCrystalGeo, innerCrystalMat);
-    crystalGroup.add(innerCrystalMesh);
-
-    // Small subtle orbital ring around right crystal
-    const ringGeo = new THREE.TorusGeometry(2.2, 0.02, 16, 100);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.4 });
-    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-    ringMesh.rotation.x = Math.PI / 3;
-    crystalGroup.add(ringMesh);
-
-    // 2. Ambient Particles System across space (fewer on mobile for smooth performance)
-    const particlesCount = isMobile ? 90 : 250;
+    // Subtle Ambient Floating Star Particles across background (Non-overlapping)
+    const particlesCount = isMobile ? 120 : 220;
     const posArray = new Float32Array(particlesCount * 3);
 
     for (let i = 0; i < particlesCount * 3; i++) {
@@ -72,43 +39,32 @@ function Canvas3DScene() {
     particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
 
     const particlesMat = new THREE.PointsMaterial({
-      size: 0.05,
+      size: isMobile ? 0.05 : 0.04,
       color: 0x38bdf8,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.5,
     });
     const particlesMesh = new THREE.Points(particlesGeo, particlesMat);
     scene.add(particlesMesh);
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
 
-    const pointLight = new THREE.PointLight(0x38bdf8, 2, 50);
-    pointLight.position.set(5, 5, 5);
-    scene.add(pointLight);
+    // Touch & Mouse Parallax Interaction
+    let targetX = 0;
+    let targetY = 0;
 
-    // Mouse Interaction for Parallax (desktop)
-    let mouseX = 0;
-    let mouseY = 0;
-
-    const handleMouseMove = (event) => {
+    const handlePointerMove = (event) => {
+      const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+      const clientY = event.touches ? event.touches[0].clientY : event.clientY;
       const rect = container.getBoundingClientRect();
-      mouseX = ((event.clientX - rect.left) / container.clientWidth) * 2 - 1;
-      mouseY = -((event.clientY - rect.top) / container.clientHeight) * 2 + 1;
+      targetX = ((clientX - rect.left) / container.clientWidth) * 2 - 1;
+      targetY = -((clientY - rect.top) / container.clientHeight) * 2 + 1;
     };
 
-    // Touch Interaction for Parallax (mobile) — same effect as mouse move
-    const handleTouchMove = (event) => {
-      if (!event.touches || event.touches.length === 0) return;
-      const touch = event.touches[0];
-      const rect = container.getBoundingClientRect();
-      mouseX = ((touch.clientX - rect.left) / container.clientWidth) * 2 - 1;
-      mouseY = -((touch.clientY - rect.top) / container.clientHeight) * 2 + 1;
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('touchmove', handlePointerMove);
 
     // Resize Handler
     const handleResize = () => {
@@ -120,23 +76,17 @@ function Canvas3DScene() {
 
     window.addEventListener('resize', handleResize);
 
-    // Animation Loop — rotations run continuously regardless of mouse/touch input
+    // Animation Loop
     let animationFrameId;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
-      // Subtle rotations on right side crystal only — always animating
-      crystalMesh.rotation.x += 0.006;
-      crystalMesh.rotation.y += 0.008;
-      innerCrystalMesh.rotation.x -= 0.005;
-      innerCrystalMesh.rotation.y += 0.007;
-      ringMesh.rotation.z += 0.004;
+      // Subtle ambient particle drift
+      particlesMesh.rotation.y -= 0.0006;
 
-      particlesMesh.rotation.y -= 0.0008;
-
-      // Parallax smooth lerp (from mouse on desktop, touch on mobile)
-      camera.position.x += (mouseX * 0.5 - camera.position.x) * 0.05;
-      camera.position.y += (mouseY * 0.5 - camera.position.y) * 0.05;
+      // Parallax smooth lerp
+      camera.position.x += (targetX * 0.4 - camera.position.x) * 0.05;
+      camera.position.y += (targetY * 0.4 - camera.position.y) * 0.05;
       camera.lookAt(scene.position);
 
       renderer.render(scene, camera);
@@ -146,8 +96,8 @@ function Canvas3DScene() {
 
     return () => {
       cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('touchmove', handlePointerMove);
       window.removeEventListener('resize', handleResize);
       if (container && renderer.domElement) {
         container.removeChild(renderer.domElement);
@@ -162,27 +112,27 @@ function Canvas3DScene() {
 export default function Hero3D({ onOpenRecruiter, onOpenResume }) {
   return (
     <section id="hero" className="relative min-h-screen flex items-center justify-center pt-24 pb-16 overflow-hidden bg-grid-pattern">
-      {/* 3D Subtle Background Canvas */}
+      {/* Subtle Background Particle Canvas */}
       <Canvas3DScene />
 
-      {/* Soft Ambient Radial Background Glows (Non-blocking) */}
-      <div className="absolute top-1/4 left-10 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Clean Soft Ambient Radial Background Glows */}
+      <div className="absolute top-1/4 left-5 w-72 sm:w-96 h-72 sm:h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-5 w-72 sm:w-96 h-72 sm:h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           
-          {/* Main Hero Content (Left 7 Cols) - Clean & Highly Readable */}
+          {/* Main Hero Content (Left 7 Cols) - Ultra Clean & Crisp */}
           <div className="lg:col-span-7 space-y-6 text-left">
             
             {/* Status Badges */}
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-sky-500/30 text-xs font-semibold text-sky-300 backdrop-blur-md">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-sky-500/30 text-[11px] sm:text-xs font-semibold text-sky-300 backdrop-blur-md">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                <span>BS Computer Science Graduate (2026)</span>
+                <span>BS Computer Science Graduate</span>
               </div>
 
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-950/80 border border-indigo-500/30 text-xs font-semibold text-indigo-300">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-950/80 border border-indigo-500/30 text-[11px] sm:text-xs font-semibold text-indigo-300">
                 <Gamepad2 className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Unreal Engine 3D Developer</span>
               </div>
@@ -190,19 +140,19 @@ export default function Hero3D({ onOpenRecruiter, onOpenResume }) {
 
             {/* Main Headline */}
             <div className="space-y-2">
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
                 Hi, I'm{' '}
                 <span className="text-gradient-cyan underline decoration-sky-500/40 underline-offset-8">
                   {personalData.name}
                 </span>
               </h1>
-              <p className="text-xl sm:text-2xl font-bold text-gradient-purple">
+              <p className="text-lg sm:text-2xl font-bold text-gradient-purple">
                 {personalData.title} & Software Engineer
               </p>
             </div>
 
             {/* Bio Paragraph */}
-            <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-2xl font-normal">
+            <p className="text-slate-300 text-sm sm:text-lg leading-relaxed max-w-2xl font-normal">
               Building robust full-stack MERN web applications and immersive 3D games.
               Experienced in <span className="text-sky-300 font-semibold">MongoDB, Express, React, Node.js</span>, 
               <span className="text-emerald-300 font-semibold"> Java, Python, SQL</span>, and 
@@ -214,7 +164,7 @@ export default function Hero3D({ onOpenRecruiter, onOpenResume }) {
               {['React.js', 'Node.js', 'Express.js', 'MongoDB', 'Java', 'Python', 'Unreal Engine', 'C++', 'Tailwind CSS'].map((tech) => (
                 <span
                   key={tech}
-                  className="px-3 py-1 text-xs font-medium text-slate-300 bg-slate-900/90 border border-slate-800 rounded-lg hover:border-sky-500/40 hover:text-sky-300 transition-colors"
+                  className="px-2.5 py-1 text-[11px] sm:text-xs font-medium text-slate-300 bg-slate-900/90 border border-slate-800 rounded-lg hover:border-sky-500/40 hover:text-sky-300 transition-colors"
                 >
                   {tech}
                 </span>
@@ -222,20 +172,20 @@ export default function Hero3D({ onOpenRecruiter, onOpenResume }) {
             </div>
 
             {/* Action Buttons Row */}
-            <div className="flex flex-wrap items-center gap-4 pt-4">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-4">
               {/* Impress Recruiter Button */}
               <button
                 onClick={onOpenRecruiter}
-                className="flex items-center gap-3 px-6 py-3.5 text-base font-bold text-white bg-gradient-to-r from-sky-500 via-indigo-600 to-purple-600 rounded-xl shadow-xl shadow-sky-500/25 hover:shadow-sky-500/40 hover:scale-105 active:scale-95 transition-all duration-200 pulse-button border border-sky-300/40"
+                className="flex items-center gap-2.5 px-5 sm:px-6 py-3 sm:py-3.5 text-sm sm:text-base font-bold text-white bg-gradient-to-r from-sky-500 via-indigo-600 to-purple-600 rounded-xl shadow-xl shadow-sky-500/25 hover:shadow-sky-500/40 hover:scale-105 active:scale-95 transition-all duration-200 pulse-button border border-sky-300/40"
               >
-                <Sparkles className="w-5 h-5 text-amber-300" />
+                <Sparkles className="w-4 sm:w-5 h-4 sm:h-5 text-amber-300" />
                 <span>Impress Recruiter Mode</span>
               </button>
 
               {/* View Projects Button */}
               <a
                 href="#projects"
-                className="flex items-center gap-2 px-6 py-3.5 text-base font-semibold text-slate-200 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-500 rounded-xl transition-all duration-200"
+                className="flex items-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 text-sm sm:text-base font-semibold text-slate-200 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-500 rounded-xl transition-all duration-200"
               >
                 <span>View MERN Projects</span>
                 <ArrowRight className="w-4 h-4 text-sky-400" />
@@ -244,7 +194,7 @@ export default function Hero3D({ onOpenRecruiter, onOpenResume }) {
               {/* Download CV Button */}
               <button
                 onClick={onOpenResume}
-                className="flex items-center gap-2 px-5 py-3.5 text-base font-semibold text-slate-300 hover:text-white bg-slate-950/80 hover:bg-slate-900 border border-slate-800 rounded-xl transition-all"
+                className="flex items-center gap-2 px-4 sm:px-5 py-3 sm:py-3.5 text-sm sm:text-base font-semibold text-slate-300 hover:text-white bg-slate-950/80 hover:bg-slate-900 border border-slate-800 rounded-xl transition-all"
               >
                 <Download className="w-4 h-4 text-sky-400" />
                 <span>Download CV</span>
@@ -252,22 +202,22 @@ export default function Hero3D({ onOpenRecruiter, onOpenResume }) {
             </div>
 
             {/* Quick Stats Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-slate-800/80">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-6 border-t border-slate-800/80">
               <div>
-                <div className="text-2xl font-black text-white">Full MERN</div>
-                <div className="text-xs text-slate-400 font-medium">Stack Mastery</div>
+                <div className="text-xl sm:text-2xl font-black text-white">Full MERN</div>
+                <div className="text-[11px] sm:text-xs text-slate-400 font-medium">Stack Mastery</div>
               </div>
               <div>
-                <div className="text-2xl font-black text-sky-400">6 Months</div>
-                <div className="text-xs text-slate-400 font-medium">Giga Developers Intern</div>
+                <div className="text-xl sm:text-2xl font-black text-sky-400">6 Months</div>
+                <div className="text-[11px] sm:text-xs text-slate-400 font-medium">Giga Developers Intern</div>
               </div>
               <div>
-                <div className="text-2xl font-black text-purple-400">Unreal 3D</div>
-                <div className="text-xs text-slate-400 font-medium">FYP C++ Engine</div>
+                <div className="text-xl sm:text-2xl font-black text-purple-400">Unreal 3D</div>
+                <div className="text-[11px] sm:text-xs text-slate-400 font-medium">FYP C++ Engine</div>
               </div>
               <div>
-                <div className="text-2xl font-black text-emerald-400">BS CS '26</div>
-                <div className="text-xs text-slate-400 font-medium">Univ of Haripur</div>
+                <div className="text-xl sm:text-2xl font-black text-emerald-400">BS CS Grad</div>
+                <div className="text-[11px] sm:text-xs text-slate-400 font-medium">Univ of Haripur</div>
               </div>
             </div>
 
@@ -275,7 +225,7 @@ export default function Hero3D({ onOpenRecruiter, onOpenResume }) {
 
           {/* Right Column: Code Config Panel (Right 5 Cols) */}
           <div className="lg:col-span-5 relative">
-            <div className="glass-panel-glow rounded-3xl p-6 sm:p-8 space-y-6 relative overflow-hidden">
+            <div className="glass-panel-glow rounded-3xl p-5 sm:p-8 space-y-5 sm:space-y-6 relative overflow-hidden">
               
               {/* Top Panel Header */}
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
@@ -283,15 +233,15 @@ export default function Hero3D({ onOpenRecruiter, onOpenResume }) {
                   <div className="w-3 h-3 rounded-full bg-red-500"></div>
                   <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span className="text-xs font-mono text-slate-400 ml-2">laiba_fatima.config.js</span>
+                  <span className="text-[11px] sm:text-xs font-mono text-slate-400 ml-2">laiba_fatima.config.js</span>
                 </div>
-                <span className="text-xs font-semibold text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-md border border-emerald-800/60">
+                <span className="text-[11px] sm:text-xs font-semibold text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-md border border-emerald-800/60">
                   Ready for Hire
                 </span>
               </div>
 
               {/* Code Snippet Box */}
-              <div className="font-mono text-xs text-slate-300 bg-slate-950/90 p-4 rounded-xl border border-slate-800 space-y-2 overflow-x-auto">
+              <div className="font-mono text-[11px] sm:text-xs text-slate-300 bg-slate-950/90 p-3.5 sm:p-4 rounded-xl border border-slate-800 space-y-1.5 sm:space-y-2 overflow-x-auto">
                 <p><span className="text-purple-400">const</span> developer = &#123;</p>
                 <p className="pl-4"><span className="text-sky-400">name</span>: <span className="text-emerald-300">"{personalData.name}"</span>,</p>
                 <p className="pl-4"><span className="text-sky-400">role</span>: <span className="text-emerald-300">"Full MERN Stack Developer"</span>,</p>
@@ -303,8 +253,8 @@ export default function Hero3D({ onOpenRecruiter, onOpenResume }) {
               </div>
 
               {/* Highlight Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                <div className="p-3.5 bg-slate-900/80 rounded-xl border border-slate-800 flex items-start gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex items-start gap-3">
                   <Layers className="w-5 h-5 text-sky-400 shrink-0 mt-0.5" />
                   <div>
                     <div className="text-xs font-bold text-slate-200">MERN Architecture</div>
@@ -312,7 +262,7 @@ export default function Hero3D({ onOpenRecruiter, onOpenResume }) {
                   </div>
                 </div>
 
-                <div className="p-3.5 bg-slate-900/80 rounded-xl border border-slate-800 flex items-start gap-3">
+                <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex items-start gap-3">
                   <Gamepad2 className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
                   <div>
                     <div className="text-xs font-bold text-slate-200">Unreal Engine 3D</div>
@@ -322,7 +272,7 @@ export default function Hero3D({ onOpenRecruiter, onOpenResume }) {
               </div>
 
               {/* Impress Recruiter Action Bar */}
-              <div className="pt-2">
+              <div className="pt-1">
                 <button
                   onClick={onOpenRecruiter}
                   className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 border border-sky-500/30 hover:border-sky-400 rounded-xl flex items-center justify-between text-xs font-bold text-sky-300 transition-all group"
