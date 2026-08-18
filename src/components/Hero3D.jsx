@@ -10,6 +10,9 @@ function Canvas3DScene() {
     const container = mountRef.current;
     if (!container) return;
 
+    // Detect mobile for a lighter scene + touch support
+    const isMobile = window.innerWidth < 768;
+
     // Scene setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
@@ -20,9 +23,9 @@ function Canvas3DScene() {
     );
     camera.position.z = 8;
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: !isMobile });
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
     container.appendChild(renderer.domElement);
 
     // 1. Sleek Floating 3D Geometric Crystal (Positioned on Far Right, NOT overlapping text)
@@ -57,8 +60,8 @@ function Canvas3DScene() {
     ringMesh.rotation.x = Math.PI / 3;
     crystalGroup.add(ringMesh);
 
-    // 2. Ambient Particles System across space
-    const particlesCount = 250;
+    // 2. Ambient Particles System across space (fewer on mobile for smooth performance)
+    const particlesCount = isMobile ? 90 : 250;
     const posArray = new Float32Array(particlesCount * 3);
 
     for (let i = 0; i < particlesCount * 3; i++) {
@@ -85,7 +88,7 @@ function Canvas3DScene() {
     pointLight.position.set(5, 5, 5);
     scene.add(pointLight);
 
-    // Mouse Interaction for Parallax
+    // Mouse Interaction for Parallax (desktop)
     let mouseX = 0;
     let mouseY = 0;
 
@@ -95,7 +98,17 @@ function Canvas3DScene() {
       mouseY = -((event.clientY - rect.top) / container.clientHeight) * 2 + 1;
     };
 
+    // Touch Interaction for Parallax (mobile) — same effect as mouse move
+    const handleTouchMove = (event) => {
+      if (!event.touches || event.touches.length === 0) return;
+      const touch = event.touches[0];
+      const rect = container.getBoundingClientRect();
+      mouseX = ((touch.clientX - rect.left) / container.clientWidth) * 2 - 1;
+      mouseY = -((touch.clientY - rect.top) / container.clientHeight) * 2 + 1;
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
 
     // Resize Handler
     const handleResize = () => {
@@ -107,12 +120,12 @@ function Canvas3DScene() {
 
     window.addEventListener('resize', handleResize);
 
-    // Animation Loop
+    // Animation Loop — rotations run continuously regardless of mouse/touch input
     let animationFrameId;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
-      // Subtle rotations on right side crystal only
+      // Subtle rotations on right side crystal only — always animating
       crystalMesh.rotation.x += 0.006;
       crystalMesh.rotation.y += 0.008;
       innerCrystalMesh.rotation.x -= 0.005;
@@ -121,7 +134,7 @@ function Canvas3DScene() {
 
       particlesMesh.rotation.y -= 0.0008;
 
-      // Parallax smooth lerp
+      // Parallax smooth lerp (from mouse on desktop, touch on mobile)
       camera.position.x += (mouseX * 0.5 - camera.position.x) * 0.05;
       camera.position.y += (mouseY * 0.5 - camera.position.y) * 0.05;
       camera.lookAt(scene.position);
@@ -134,6 +147,7 @@ function Canvas3DScene() {
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('resize', handleResize);
       if (container && renderer.domElement) {
         container.removeChild(renderer.domElement);
